@@ -136,32 +136,59 @@ export async function deleteTeacher(id: string) {
 }
 
 // --- COURSES ---
-export async function getCourses(teacherId?: string): Promise<(Course & { teacher?: Teacher; track?: Track; subject?: Subject })[]> {
-  let query = supabase.from('courses').select('*, teacher:teachers(*), track:tracks(*), subject:subjects(*)').eq('status', 'active').order('created_at', { ascending: false })
+interface CourseRow extends Omit<Course, 'tracks'> {
+  tracks?: { track: Track }[]
+}
+
+function flattenCourse(course: CourseRow): Course {
+  return { ...course, tracks: (course.tracks || []).map(tt => tt.track) }
+}
+
+export async function getCourses(teacherId?: string): Promise<Course[]> {
+  let query = supabase.from('courses').select('*, teacher:teachers(*), tracks:course_tracks(track:tracks(*)), subject:subjects(*)').eq('status', 'active').order('created_at', { ascending: false })
   if (teacherId) query = query.eq('teacher_id', teacherId)
   const { data, error } = await query
-  if (error) return handleQueryError(error, 'getCourses') as (Course & { teacher?: Teacher; track?: Track; subject?: Subject })[]
-  return data ?? []
+  if (error) return handleQueryError(error, 'getCourses') as Course[]
+  return (data ?? [] as unknown as CourseRow[]).map(flattenCourse)
 }
 
 export async function getAllCourses(): Promise<Course[]> {
-  const { data, error } = await supabase.from('courses').select('*, teacher:teachers(*), track:tracks(*), subject:subjects(*)').order('created_at', { ascending: false })
+  const { data, error } = await supabase.from('courses').select('*, teacher:teachers(*), tracks:course_tracks(track:tracks(*)), subject:subjects(*)').order('created_at', { ascending: false })
   if (error) return handleQueryError(error, 'getAllCourses') as Course[]
-  return data ?? []
+  return (data ?? [] as unknown as CourseRow[]).map(flattenCourse)
 }
 
-export async function getCourse(id: string): Promise<Course & { teacher?: Teacher; track?: Track; subject?: Subject } | null> {
-  const { data, error } = await supabase.from('courses').select('*, teacher:teachers(*), track:tracks(*), subject:subjects(*)').eq('id', id).single()
+export async function getCourse(id: string): Promise<Course | null> {
+  const { data, error } = await supabase.from('courses').select('*, teacher:teachers(*), tracks:course_tracks(track:tracks(*)), subject:subjects(*)').eq('id', id).single()
   if (error) { console.error('getCourse error:', error); return null }
-  return data
+  return data ? flattenCourse(data as unknown as CourseRow) : null
 }
 
 export async function createCourse(course: Partial<Course>) {
-  return supabase.from('courses').insert(course).select().single()
+  const { track_ids, ...courseData } = course as any
+  const { data, error } = await supabase.from('courses').insert(courseData).select().single()
+  if (error) return { data: null, error }
+  if (track_ids?.length) {
+    await supabase.from('course_tracks').insert(
+      track_ids.map((track_id: string) => ({ course_id: data.id, track_id }))
+    )
+  }
+  return { data, error: null }
 }
 
 export async function updateCourse(id: string, updates: Partial<Course>) {
-  return supabase.from('courses').update(updates).eq('id', id).select().single()
+  const { track_ids, ...courseData } = updates as any
+  const { data, error } = await supabase.from('courses').update(courseData).eq('id', id).select().single()
+  if (error) return { data: null, error }
+  if (track_ids) {
+    await supabase.from('course_tracks').delete().eq('course_id', id)
+    if (track_ids.length) {
+      await supabase.from('course_tracks').insert(
+        track_ids.map((track_id: string) => ({ course_id: id, track_id }))
+      )
+    }
+  }
+  return { data, error: null }
 }
 
 export async function deleteCourse(id: string) {

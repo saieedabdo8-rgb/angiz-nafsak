@@ -107,7 +107,6 @@ create table if not exists teacher_tracks (
 create table if not exists courses (
   id uuid primary key default gen_random_uuid(),
   teacher_id uuid not null references teachers(id) on delete cascade,
-  track_id uuid references tracks(id),
   subject_id uuid references subjects(id),
   name text not null,
   description text,
@@ -116,6 +115,13 @@ create table if not exists courses (
   status text not null default 'active' check (status in ('active', 'hidden', 'archived')),
   created_at timestamptz default now(),
   updated_at timestamptz default now()
+);
+
+-- 7b. COURSE_TRACKS (many-to-many)
+create table if not exists course_tracks (
+  course_id uuid not null references courses(id) on delete cascade,
+  track_id uuid not null references tracks(id) on delete cascade,
+  primary key (course_id, track_id)
 );
 
 -- 8. CODES

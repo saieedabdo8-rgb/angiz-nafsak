@@ -23,20 +23,22 @@ const statusLabels: Record<string, string> = {
   archived: 'مؤرشف',
 }
 
-const defaultForm: Partial<Course> = {
-  name: '', description: '', teacher_id: '', track_id: null, subject_id: null,
-  price: 0, thumbnail: null, status: 'active',
+type CourseForm = Partial<Course> & { track_ids: string[] }
+
+const defaultForm: CourseForm = {
+  name: '', description: '', teacher_id: '', track_ids: [] as string[],
+  subject_id: null, price: 0, thumbnail: null, status: 'active',
 }
 
 export default function CoursesPage() {
-  const [courses, setCourses] = useState<(Course & { teacher?: Teacher; track?: Track; subject?: Subject })[]>([])
+  const [courses, setCourses] = useState<Course[]>([])
   const [teachers, setTeachers] = useState<Teacher[]>([])
   const [tracks, setTracks] = useState<Track[]>([])
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Course | null>(null)
-  const [form, setForm] = useState<Partial<Course>>(defaultForm)
+  const [form, setForm] = useState<CourseForm>(defaultForm)
   const [saving, setSaving] = useState(false)
   const [thumbFile, setThumbFile] = useState<File | null>(null)
   const [thumbPreview, setThumbPreview] = useState<string | null>(null)
@@ -65,7 +67,7 @@ export default function CoursesPage() {
 
   function openEdit(course: Course) {
     setEditing(course)
-    setForm({ ...course })
+    setForm({ ...course, track_ids: course.tracks?.map(t => t.id) || [] })
     setThumbPreview(course.thumbnail)
     setThumbFile(null)
     setDialogOpen(true)
@@ -88,15 +90,17 @@ export default function CoursesPage() {
       if (url) thumbUrl = url
     }
 
-    const payload = { ...form, thumbnail: thumbUrl, price: Number(form.price) }
+    const { tracks: _tracks, created_at, updated_at, ...payload } = form as any
+    payload.thumbnail = thumbUrl
+    payload.price = Number(form.price)
 
     if (editing) {
-      const { error } = await updateCourse(editing.id, payload)
-      if (error) { toast.error('حدث خطأ'); setSaving(false); return }
+      const r = await updateCourse(editing.id, payload)
+      if (r?.error) { toast.error('حدث خطأ'); setSaving(false); return }
       toast.success('تم التحديث')
     } else {
-      const { error } = await createCourse(payload)
-      if (error) { toast.error('حدث خطأ'); setSaving(false); return }
+      const r = await createCourse(payload)
+      if (r?.error) { toast.error('حدث خطأ'); setSaving(false); return }
       toast.success('تم الإضافة')
     }
     setSaving(false)
@@ -199,14 +203,6 @@ export default function CoursesPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">الشعبة</label>
-                <select value={form.track_id || ''} onChange={e => setForm({ ...form, track_id: e.target.value || null })}
-                  className="flex h-11 w-full rounded-xl border border-[var(--border,#e2e8f0)] bg-white dark:bg-slate-900 px-4 py-2 text-sm text-[var(--text,#0f172a)]">
-                  <option value="">بدون شعبة</option>
-                  {tracks.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
-              </div>
-              <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">المادة</label>
                 <select value={form.subject_id || ''} onChange={e => setForm({ ...form, subject_id: e.target.value || null })}
                   className="flex h-11 w-full rounded-xl border border-[var(--border,#e2e8f0)] bg-white dark:bg-slate-900 px-4 py-2 text-sm text-[var(--text,#0f172a)]">
@@ -214,28 +210,50 @@ export default function CoursesPage() {
                   {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">السعر</label>
                 <Input type="number" value={form.price ?? 0} onChange={e => setForm({ ...form, price: Number(e.target.value) })} placeholder="السعر" />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">الصورة المصغرة</label>
-                <div className="flex items-center gap-3">
-                  {thumbPreview && (
-                    <div className="w-14 h-14 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
-                      <img src={thumbPreview} alt="" className="w-full h-full object-cover" />
-                    </div>
-                  )}
-                  <label className="cursor-pointer">
-                    <div className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800">
-                      <Upload className="w-4 h-4" />اختيار صورة
-                    </div>
-                    <input type="file" accept="image/*" className="hidden" onChange={handleThumbUpload} />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">الشعب (اختياري - يمكن اختيار أكثر من شعبة)</label>
+              <div className="space-y-2 max-h-40 overflow-y-auto rounded-xl border border-[var(--border,#e2e8f0)] p-3">
+                {tracks.length === 0 ? (
+                  <p className="text-sm text-slate-400">لا توجد شعب</p>
+                ) : tracks.map(t => (
+                  <label key={t.id} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.track_ids?.includes(t.id) || false}
+                      onChange={e => {
+                        const next = e.target.checked
+                          ? [...(form.track_ids || []), t.id]
+                          : (form.track_ids || []).filter(id => id !== t.id)
+                        setForm({ ...form, track_ids: next })
+                      }}
+                      className="w-4 h-4 rounded accent-[var(--primary,#2563eb)]"
+                    />
+                    <span className="text-sm text-slate-700 dark:text-slate-300">{t.name}</span>
                   </label>
-                </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">الصورة المصغرة</label>
+              <div className="flex items-center gap-3">
+                {thumbPreview && (
+                  <div className="w-14 h-14 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
+                    <img src={thumbPreview} alt="" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <label className="cursor-pointer">
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800">
+                    <Upload className="w-4 h-4" />اختيار صورة
+                  </div>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleThumbUpload} />
+                </label>
               </div>
             </div>
 

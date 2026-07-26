@@ -68,7 +68,6 @@ export interface Teacher {
 export interface Course {
   id: string
   teacher_id: string
-  track_id: string | null
   subject_id: string | null
   name: string
   description: string | null
@@ -78,7 +77,7 @@ export interface Course {
   created_at: string
   updated_at: string
   teacher?: Teacher
-  track?: Track
+  tracks?: Track[]
   subject?: Subject
 }
 

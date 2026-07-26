@@ -89,10 +89,8 @@ export default function AdminLayout() {
           {/* Logout */}
           <div className="p-4" style={{ borderTop: '1px solid var(--border, #e2e8f0)' }}>
             <button onClick={handleLogout}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium w-full transition-colors"
-              style={{ color: 'var(--danger, #dc2626)' }}
-              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--danger, #dc2626) / 0.08')}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium w-full transition-colors hover:bg-red-50 dark:hover:bg-red-950/50"
+              style={{ color: 'var(--danger, #dc2626)' }}>
               <LogOut className="w-5 h-5" />
               تسجيل خروج
             </button>

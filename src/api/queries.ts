@@ -1,14 +1,21 @@
 import { supabase } from '@/lib/supabase'
 import type { Track, Subject, Teacher, Course, Code, Order, Payment, Purchase, Profile, TrackSubject } from '@/types'
 
+export function handleQueryError(error: unknown, label: string) {
+  console.error(`${label} error:`, error)
+  return []
+}
+
 // --- TRACKS ---
 export async function getTracks(): Promise<Track[]> {
-  const { data } = await supabase.from('tracks').select('*').eq('status', 'active').order('display_order')
+  const { data, error } = await supabase.from('tracks').select('*').eq('status', 'active').order('display_order')
+  if (error) return handleQueryError(error, 'getTracks') as Track[]
   return data ?? []
 }
 
 export async function getAllTracks(): Promise<Track[]> {
-  const { data } = await supabase.from('tracks').select('*').order('display_order')
+  const { data, error } = await supabase.from('tracks').select('*').order('display_order')
+  if (error) return handleQueryError(error, 'getAllTracks') as Track[]
   return data ?? []
 }
 
@@ -28,18 +35,21 @@ export async function deleteTrack(id: string) {
 export async function getSubjects(trackId?: string): Promise<Subject[]> {
   let query = supabase.from('subjects').select('*').eq('status', 'active').order('display_order')
   if (trackId) {
-    const { data: trackSubjects } = await supabase.from('track_subjects').select('subject_id').eq('track_id', trackId)
+    const { data: trackSubjects, error: tsError } = await supabase.from('track_subjects').select('subject_id').eq('track_id', trackId)
+    if (tsError) return handleQueryError(tsError, 'getSubjects track_subjects') as Subject[]
     if (trackSubjects?.length) {
       query = supabase.from('subjects').select('*').eq('status', 'active')
         .in('id', trackSubjects.map(ts => ts.subject_id)).order('display_order')
     }
   }
-  const { data } = await query
+  const { data, error } = await query
+  if (error) return handleQueryError(error, 'getSubjects') as Subject[]
   return data ?? []
 }
 
 export async function getAllSubjects(): Promise<Subject[]> {
-  const { data } = await supabase.from('subjects').select('*').order('display_order')
+  const { data, error } = await supabase.from('subjects').select('*').order('display_order')
+  if (error) return handleQueryError(error, 'getAllSubjects') as Subject[]
   return data ?? []
 }
 
@@ -57,7 +67,8 @@ export async function deleteSubject(id: string) {
 
 // --- TRACK-SUBJECTS ---
 export async function getTrackSubjects(trackId: string): Promise<TrackSubject[]> {
-  const { data } = await supabase.from('track_subjects').select('*').eq('track_id', trackId)
+  const { data, error } = await supabase.from('track_subjects').select('*').eq('track_id', trackId)
+  if (error) return handleQueryError(error, 'getTrackSubjects') as TrackSubject[]
   return data ?? []
 }
 
@@ -73,12 +84,14 @@ export async function setTrackSubjects(trackId: string, subjectIds: string[]) {
 export async function getTeachers(subjectId?: string): Promise<(Teacher & { subject?: Subject; track?: Track })[]> {
   let query = supabase.from('teachers').select('*, subject:subjects(*), track:tracks(*)').eq('status', 'active').order('display_order')
   if (subjectId) query = query.eq('subject_id', subjectId)
-  const { data } = await query
+  const { data, error } = await query
+  if (error) return handleQueryError(error, 'getTeachers') as (Teacher & { subject?: Subject; track?: Track })[]
   return data ?? []
 }
 
 export async function getAllTeachers(): Promise<Teacher[]> {
-  const { data } = await supabase.from('teachers').select('*, subject:subjects(*), track:tracks(*)').order('display_order')
+  const { data, error } = await supabase.from('teachers').select('*, subject:subjects(*), track:tracks(*)').order('display_order')
+  if (error) return handleQueryError(error, 'getAllTeachers') as Teacher[]
   return data ?? []
 }
 
@@ -98,17 +111,20 @@ export async function deleteTeacher(id: string) {
 export async function getCourses(teacherId?: string): Promise<(Course & { teacher?: Teacher; track?: Track; subject?: Subject })[]> {
   let query = supabase.from('courses').select('*, teacher:teachers(*), track:tracks(*), subject:subjects(*)').eq('status', 'active').order('created_at', { ascending: false })
   if (teacherId) query = query.eq('teacher_id', teacherId)
-  const { data } = await query
+  const { data, error } = await query
+  if (error) return handleQueryError(error, 'getCourses') as (Course & { teacher?: Teacher; track?: Track; subject?: Subject })[]
   return data ?? []
 }
 
 export async function getAllCourses(): Promise<Course[]> {
-  const { data } = await supabase.from('courses').select('*, teacher:teachers(*), track:tracks(*), subject:subjects(*)').order('created_at', { ascending: false })
+  const { data, error } = await supabase.from('courses').select('*, teacher:teachers(*), track:tracks(*), subject:subjects(*)').order('created_at', { ascending: false })
+  if (error) return handleQueryError(error, 'getAllCourses') as Course[]
   return data ?? []
 }
 
-export async function getCourse(id: string): Promise<Course & { teacher?: Teacher; track?: Track; subject?: Subject }> {
-  const { data } = await supabase.from('courses').select('*, teacher:teachers(*), track:tracks(*), subject:subjects(*)').eq('id', id).single()
+export async function getCourse(id: string): Promise<Course & { teacher?: Teacher; track?: Track; subject?: Subject } | null> {
+  const { data, error } = await supabase.from('courses').select('*, teacher:teachers(*), track:tracks(*), subject:subjects(*)').eq('id', id).single()
+  if (error) { console.error('getCourse error:', error); return null }
   return data
 }
 
@@ -126,7 +142,8 @@ export async function deleteCourse(id: string) {
 
 // --- CODES ---
 export async function getCodes(courseId: string): Promise<Code[]> {
-  const { data } = await supabase.from('codes').select('*').eq('course_id', courseId).order('created_at')
+  const { data, error } = await supabase.from('codes').select('*').eq('course_id', courseId).order('created_at')
+  if (error) return handleQueryError(error, 'getCodes') as Code[]
   return data ?? []
 }
 
@@ -152,14 +169,16 @@ export async function createOrder(studentId: string, courseId: string, teacherId
 }
 
 export async function getMyOrders(studentId: string): Promise<(Order & { course?: Course; teacher?: Teacher })[]> {
-  const { data } = await supabase.from('orders').select('*, course:courses(*), teacher:teachers(*)')
+  const { data, error } = await supabase.from('orders').select('*, course:courses(*), teacher:teachers(*)')
     .eq('student_id', studentId).order('created_at', { ascending: false })
+  if (error) return handleQueryError(error, 'getMyOrders') as (Order & { course?: Course; teacher?: Teacher })[]
   return data ?? []
 }
 
 export async function getAllOrders(): Promise<(Order & { student?: Profile; course?: Course; teacher?: Teacher })[]> {
-  const { data } = await supabase.from('orders').select('*, student:profiles!student_id(*), course:courses(*), teacher:teachers(*)')
+  const { data, error } = await supabase.from('orders').select('*, student:profiles!student_id(*), course:courses(*), teacher:teachers(*)')
     .order('created_at', { ascending: false })
+  if (error) return handleQueryError(error, 'getAllOrders') as (Order & { student?: Profile; course?: Course; teacher?: Teacher })[]
   return data ?? []
 }
 
@@ -176,45 +195,75 @@ export async function createPayment(orderId: string, studentId: string, amount: 
 }
 
 export async function getMyPayments(studentId: string): Promise<(Payment & { order?: Order })[]> {
-  const { data } = await supabase.from('payments').select('*, order:orders(*, course:courses(*))')
+  const { data, error } = await supabase.from('payments').select('*, order:orders(*, course:courses(*))')
     .eq('student_id', studentId).order('created_at', { ascending: false })
+  if (error) return handleQueryError(error, 'getMyPayments') as (Payment & { order?: Order })[]
   return data ?? []
 }
 
 export async function getAllPayments(): Promise<(Payment & { order?: Order; student?: Profile })[]> {
-  const { data } = await supabase.from('payments').select('*, order:orders(*), student:profiles!student_id(*)')
+  const { data, error } = await supabase.from('payments').select('*, order:orders(*), student:profiles!student_id(*)')
     .order('created_at', { ascending: false })
+  if (error) return handleQueryError(error, 'getAllPayments') as (Payment & { order?: Order; student?: Profile })[]
   return data ?? []
 }
 
 export async function approvePayment(paymentId: string, orderId: string) {
-  await supabase.from('payments').update({ status: 'approved' }).eq('id', paymentId)
-  await supabase.from('orders').update({ payment_status: 'approved' }).eq('id', orderId)
-  const { data } = await supabase.rpc('assign_code', { p_order_id: orderId })
+  const { error: pe } = await supabase.from('payments').update({ status: 'approved' }).eq('id', paymentId)
+  if (pe) { console.error('approvePayment payment error:', pe); return null }
+  const { error: oe } = await supabase.from('orders').update({ payment_status: 'approved' }).eq('id', orderId)
+  if (oe) { console.error('approvePayment order error:', oe); return null }
+  const { data, error } = await supabase.rpc('assign_code', { p_order_id: orderId })
+  if (error) { console.error('approvePayment assign_code error:', error); return null }
   return data
 }
 
 export async function rejectPayment(paymentId: string, orderId: string) {
-  await supabase.from('payments').update({ status: 'rejected' }).eq('id', paymentId)
-  await supabase.from('orders').update({ payment_status: 'rejected' }).eq('id', orderId)
+  const { error: pe } = await supabase.from('payments').update({ status: 'rejected' }).eq('id', paymentId)
+  if (pe) console.error('rejectPayment payment error:', pe)
+  const { error: oe } = await supabase.from('orders').update({ payment_status: 'rejected' }).eq('id', orderId)
+  if (oe) console.error('rejectPayment order error:', oe)
 }
 
 // --- PURCHASES ---
 export async function getMyPurchases(studentId: string): Promise<(Purchase & { course?: Course; teacher?: Teacher; code?: Code })[]> {
-  const { data } = await supabase.from('purchases').select('*, course:courses(*), teacher:teachers(*), code:codes(*)')
+  const { data, error } = await supabase.from('purchases').select('*, course:courses(*), teacher:teachers(*), code:codes(*)')
     .eq('student_id', studentId).order('purchased_at', { ascending: false })
+  if (error) return handleQueryError(error, 'getMyPurchases') as (Purchase & { course?: Course; teacher?: Teacher; code?: Code })[]
   return data ?? []
+}
+
+// --- STATS ---
+export async function getStats(): Promise<{ tracks: number; subjects: number; teachers: number; courses: number; students: number }> {
+  const results = await Promise.allSettled([
+    supabase.from('tracks').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+    supabase.from('subjects').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+    supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+    supabase.from('courses').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'student'),
+  ])
+  const getCount = (r: PromiseSettledResult<{ count: number | null; data: unknown; error: unknown }>) =>
+    r.status === 'fulfilled' ? (r.value.count ?? 0) : 0
+  return {
+    tracks: getCount(results[0]),
+    subjects: getCount(results[1]),
+    teachers: getCount(results[2]),
+    courses: getCount(results[3]),
+    students: getCount(results[4]),
+  }
 }
 
 // --- USERS ---
 export async function getUsers(): Promise<Profile[]> {
-  const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
+  const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
+  if (error) return handleQueryError(error, 'getUsers') as Profile[]
   return data ?? []
 }
 
 // --- STORAGE ---
 export async function uploadFile(bucket: string, path: string, file: File): Promise<string | null> {
-  const { data } = await supabase.storage.from(bucket).upload(path, file)
+  const { data, error } = await supabase.storage.from(bucket).upload(path, file)
+  if (error) { console.error('uploadFile error:', error); return null }
   if (!data) return null
   const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(path)
   return publicUrl
@@ -223,7 +272,8 @@ export async function uploadFile(bucket: string, path: string, file: File): Prom
 export async function uploadScreenshot(studentId: string, file: File): Promise<string | null> {
   const ext = file.name.split('.').pop()
   const path = `${studentId}/${Date.now()}.${ext}`
-  const { data } = await supabase.storage.from('payments').upload(path, file)
+  const { data, error } = await supabase.storage.from('payments').upload(path, file)
+  if (error) { console.error('uploadScreenshot error:', error); return null }
   if (!data) return null
   const { data: urlData } = await supabase.storage.from('payments').createSignedUrl(path, 60 * 60 * 24 * 7)
   return urlData?.signedUrl ?? null
@@ -231,7 +281,8 @@ export async function uploadScreenshot(studentId: string, file: File): Promise<s
 
 // --- SETTINGS ---
 export async function getSettings(): Promise<Record<string, string>> {
-  const { data } = await supabase.from('settings').select('*')
+  const { data, error } = await supabase.from('settings').select('*')
+  if (error) { console.error('getSettings error:', error); return {} }
   if (!data) return {}
   const map: Record<string, string> = {}
   for (const row of data) map[row.key] = row.value

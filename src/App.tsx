@@ -41,22 +41,20 @@ export default function App() {
             }
           }} />
           <Routes>
+            {/* Home (public) */}
+            <Route path="/" element={<StudentLayout />}>
+              <Route index element={<Home />} />
+              <Route path="track/:trackId" element={<ProtectedRoute><TrackDetail /></ProtectedRoute>} />
+              <Route path="subject/:subjectId" element={<ProtectedRoute><SubjectTeachers /></ProtectedRoute>} />
+              <Route path="teacher/:teacherId" element={<ProtectedRoute><TeacherDetail /></ProtectedRoute>} />
+              <Route path="course/:courseId" element={<ProtectedRoute><CourseDetail /></ProtectedRoute>} />
+              <Route path="purchases" element={<ProtectedRoute><Purchases /></ProtectedRoute>} />
+              <Route path="profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            </Route>
+
             {/* Auth */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-
-            {/* Student */}
-            <Route path="/" element={
-              <ProtectedRoute><StudentLayout /></ProtectedRoute>
-            }>
-              <Route index element={<Home />} />
-              <Route path="track/:trackId" element={<TrackDetail />} />
-              <Route path="subject/:subjectId" element={<SubjectTeachers />} />
-              <Route path="teacher/:teacherId" element={<TeacherDetail />} />
-              <Route path="course/:courseId" element={<CourseDetail />} />
-              <Route path="purchases" element={<Purchases />} />
-              <Route path="profile" element={<Profile />} />
-            </Route>
 
             {/* Admin */}
             <Route path="/admin" element={

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Search, BookOpen, Users, Star, ArrowLeft, GraduationCap, Sparkles } from 'lucide-react'
-import { getTracks } from '@/api/queries'
+import { getTracks, getStats } from '@/api/queries'
 import type { Track } from '@/types'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -10,14 +10,20 @@ import { Badge } from '@/components/ui/badge'
 
 export default function Home() {
   const [tracks, setTracks] = useState<Track[]>([])
+  const [stats, setStats] = useState({ tracks: 0, subjects: 0, teachers: 0, courses: 0, students: 0 })
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
-    getTracks().then(data => {
-      setTracks(data)
-      setLoading(false)
-    })
+    Promise.all([
+      getTracks(),
+      getStats(),
+    ]).then(([tracksData, statsData]) => {
+      setTracks(tracksData)
+      setStats(statsData)
+    }).catch(err => {
+      console.error('Home load error:', err)
+    }).finally(() => setLoading(false))
   }, [])
 
   const container = {
@@ -169,13 +175,14 @@ export default function Home() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
-        className="grid grid-cols-2 sm:grid-cols-4 gap-4"
+        className="grid grid-cols-2 sm:grid-cols-5 gap-4"
       >
         {[
-          { icon: BookOpen, label: 'شعبة دراسية', value: tracks.length },
-          { icon: Users, label: 'مدرس', value: '١٠+' },
-          { icon: Star, label: 'مادة', value: '١٥+' },
-          { icon: GraduationCap, label: 'طالب', value: '١٠٠+' },
+          { icon: BookOpen, label: 'شعبة دراسية', value: stats.tracks },
+          { icon: Star, label: 'مادة', value: stats.subjects },
+          { icon: Users, label: 'مدرس', value: stats.teachers },
+          { icon: GraduationCap, label: 'كورس', value: stats.courses },
+          { icon: Users, label: 'طالب', value: stats.students },
         ].map((stat, i) => (
           <div key={i} className="rounded-2xl border border-[var(--border,#e2e8f0)] bg-[var(--card,#f8fafc)] p-4 sm:p-6 text-center hover:shadow-md transition-shadow">
             <stat.icon className="w-6 h-6 text-[var(--primary,#2563eb)] mx-auto mb-2" />

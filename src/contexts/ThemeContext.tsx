@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
 
 interface ThemeContextType {
@@ -6,6 +6,7 @@ interface ThemeContextType {
   toggleTheme: () => void
   themeSettings: Record<string, string>
   loading: boolean
+  refreshTheme: () => Promise<void>
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
@@ -30,34 +31,43 @@ const defaults: Record<string, string> = {
   button_text: '#ffffff',
 }
 
+function applyTheme(settings: Record<string, string>, dark: boolean) {
+  const root = document.documentElement
+  for (const [key, value] of Object.entries(settings)) {
+    root.style.setProperty(`--${key.replace(/_/g, '-')}`, value)
+  }
+  root.classList.toggle('dark', dark)
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark')
   const [themeSettings, setThemeSettings] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
 
-  function applyTheme(settings: Record<string, string>) {
-    const root = document.documentElement
-    for (const [key, value] of Object.entries(settings)) {
-      root.style.setProperty(`--${key.replace(/_/g, '-')}`, value)
+  const fetchTheme = useCallback(async () => {
+    const { data, error } = await supabase.from('theme_settings').select('*')
+    if (error) {
+      console.error('ThemeContext fetch error:', error)
     }
-    root.classList.toggle('dark', isDark)
-  }
+    if (data && data.length > 0) {
+      const map: Record<string, string> = {}
+      for (const row of data) map[row.key] = row.value
+      setThemeSettings(map)
+      applyTheme(map, isDark)
+    } else {
+      applyTheme(defaults, isDark)
+    }
+    setLoading(false)
+  }, [isDark])
+
+  const refreshTheme = useCallback(async () => {
+    setLoading(true)
+    await fetchTheme()
+  }, [fetchTheme])
 
   useEffect(() => {
-    supabase.from('theme_settings').select('*').then(({ data }) => {
-      if (data) {
-        const map: Record<string, string> = {}
-        for (const row of data) {
-          map[row.key] = row.value
-        }
-        setThemeSettings(map)
-        applyTheme({ ...defaults, ...map })
-      } else {
-        applyTheme(defaults)
-      }
-      setLoading(false)
-    })
-  }, [])
+    fetchTheme()
+  }, [fetchTheme])
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark)
@@ -69,7 +79,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <ThemeContext.Provider value={{ isDark, toggleTheme, themeSettings, loading }}>
+    <ThemeContext.Provider value={{ isDark, toggleTheme, themeSettings, loading, refreshTheme }}>
       {children}
     </ThemeContext.Provider>
   )

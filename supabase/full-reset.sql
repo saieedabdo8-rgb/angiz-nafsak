@@ -84,7 +84,6 @@ create table if not exists teachers (
   cover text,
   bio text,
   subject_id uuid not null references subjects(id),
-  track_id uuid references tracks(id),
   experience text,
   facebook text,
   telegram text,
@@ -95,6 +94,13 @@ create table if not exists teachers (
   status text not null default 'active' check (status in ('active', 'hidden', 'archived')),
   created_at timestamptz default now(),
   updated_at timestamptz default now()
+);
+
+-- 6b. TEACHER_TRACKS (many-to-many)
+create table if not exists teacher_tracks (
+  teacher_id uuid not null references teachers(id) on delete cascade,
+  track_id uuid not null references tracks(id) on delete cascade,
+  primary key (teacher_id, track_id)
 );
 
 -- 7. COURSES

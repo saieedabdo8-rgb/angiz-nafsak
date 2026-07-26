@@ -140,7 +140,7 @@ create table if not exists orders (
   id uuid primary key default gen_random_uuid(),
   student_id uuid not null references auth.users(id) on delete cascade,
   course_id uuid not null references courses(id) on delete cascade,
-  teacher_id uuid not null references teachers(id),
+  teacher_id uuid not null references teachers(id) on delete cascade,
   price decimal(10,2) not null,
   payment_method text check (payment_method in ('instapay', 'vodafone_cash')),
   payment_status text not null default 'pending' check (payment_status in ('pending', 'approved', 'rejected')),
@@ -165,10 +165,10 @@ create table if not exists payments (
 create table if not exists purchases (
   id uuid primary key default gen_random_uuid(),
   student_id uuid not null references auth.users(id) on delete cascade,
-  course_id uuid not null references courses(id),
-  teacher_id uuid not null references teachers(id),
-  code_id uuid not null references codes(id),
-  order_id uuid not null references orders(id),
+  course_id uuid not null references courses(id) on delete cascade,
+  teacher_id uuid not null references teachers(id) on delete cascade,
+  code_id uuid not null references codes(id) on delete cascade,
+  order_id uuid not null references orders(id) on delete cascade,
   price decimal(10,2) not null,
   purchased_at timestamptz default now()
 );
@@ -381,6 +381,9 @@ create policy "Orders insertable by students" on orders for insert with check (a
 create policy "Orders updatable by admins" on orders for update using (
   (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
+create policy "Orders deletable by admins" on orders for delete using (
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
+);
 
 -- Payments
 alter table payments enable row level security;
@@ -396,6 +399,9 @@ create policy "Payments insertable by students" on payments for insert with chec
 create policy "Payments updatable by admins" on payments for update using (
   (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
+create policy "Payments deletable by admins" on payments for delete using (
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
+);
 
 -- Purchases
 alter table purchases enable row level security;
@@ -403,6 +409,9 @@ drop policy if exists "Purchases viewable by owner" on purchases;
 drop policy if exists "Purchases viewable by admins" on purchases;
 create policy "Purchases viewable by owner" on purchases for select using (auth.uid() = student_id);
 create policy "Purchases viewable by admins" on purchases for select using (
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
+);
+create policy "Purchases deletable by admins" on purchases for delete using (
   (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 

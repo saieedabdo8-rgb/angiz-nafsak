@@ -41,7 +41,24 @@ grant select, insert, update, delete on course_tracks to authenticated;
 grant select on teacher_tracks to anon;
 grant select on course_tracks to anon;
 
--- Fix orders FK to cascade on course delete
+-- Fix FKs to cascade on course delete
 alter table orders drop constraint if exists orders_course_id_fkey;
 alter table orders add constraint orders_course_id_fkey
   foreign key (course_id) references courses(id) on delete cascade;
+
+alter table purchases drop constraint if exists purchases_course_id_fkey;
+alter table purchases add constraint purchases_course_id_fkey
+  foreign key (course_id) references courses(id) on delete cascade;
+
+-- Add DELETE policies for admin on orders, payments, purchases
+create policy "Orders deletable by admins" on orders for delete using (
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
+);
+
+create policy "Payments deletable by admins" on payments for delete using (
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
+);
+
+create policy "Purchases deletable by admins" on purchases for delete using (
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
+);

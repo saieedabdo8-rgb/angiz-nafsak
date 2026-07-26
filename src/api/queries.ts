@@ -78,6 +78,7 @@ export async function setTrackSubjects(trackId: string, subjectIds: string[]) {
     const rows = subjectIds.map(subject_id => ({ track_id: trackId, subject_id }))
     return supabase.from('track_subjects').insert(rows)
   }
+  return { error: null }
 }
 
 // --- TEACHERS ---

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Pencil, Trash2, Eye, EyeOff, Archive, Loader2, GripVertical } from 'lucide-react'
-import { getAllTracks, createTrack, updateTrack, deleteTrack } from '@/api/queries'
-import type { Track } from '@/types'
+import { Plus, Pencil, Trash2, Eye, EyeOff, Archive, Loader2, GripVertical, BookMarked } from 'lucide-react'
+import { getAllTracks, createTrack, updateTrack, deleteTrack, getAllSubjects, setTrackSubjects, getTrackSubjects } from '@/api/queries'
+import type { Track, Subject } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -106,6 +106,12 @@ export default function TracksPage() {
   const [slugEdited, setSlugEdited] = useState(false)
   const [focusedOnce, setFocusedOnce] = useState(false)
 
+  const [subjectsOpen, setSubjectsOpen] = useState(false)
+  const [subjectsTrack, setSubjectsTrack] = useState<Track | null>(null)
+  const [allSubjects, setAllSubjects] = useState<Subject[]>([])
+  const [selectedSubjects, setSelectedSubjects] = useState<Set<string>>(new Set())
+  const [subjectsLoading, setSubjectsLoading] = useState(false)
+
   useEffect(() => { load() }, [])
 
   async function load() {
@@ -193,6 +199,37 @@ export default function TracksPage() {
     if (!error) { toast.success('تم التحديث'); load() }
   }
 
+  async function openSubjects(track: Track) {
+    setSubjectsTrack(track)
+    setSubjectsOpen(true)
+    setSubjectsLoading(true)
+    const [subjects, trackSubs] = await Promise.all([
+      getAllSubjects(),
+      getTrackSubjects(track.id),
+    ])
+    setAllSubjects(subjects)
+    setSelectedSubjects(new Set(trackSubs.map(ts => ts.subject_id)))
+    setSubjectsLoading(false)
+  }
+
+  async function saveSubjects() {
+    if (!subjectsTrack) return
+    setSubjectsLoading(true)
+    const res = await setTrackSubjects(subjectsTrack.id, Array.from(selectedSubjects))
+    setSubjectsLoading(false)
+    if (res && 'error' in res && res.error) { toast.error('حدث خطأ'); return }
+    toast.success('تم تحديث المواد')
+    setSubjectsOpen(false)
+  }
+
+  function toggleSubject(id: string) {
+    setSelectedSubjects(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
   if (loading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[var(--primary,#2563eb)]" /></div>
   }
@@ -229,6 +266,9 @@ export default function TracksPage() {
                   <Badge variant={statusColors[track.status]}>{statusLabels[track.status]}</Badge>
 
                   <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => openSubjects(track)} title="إدارة المواد">
+                      <BookMarked className="w-4 h-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => toggleStatus(track)} title="تغيير الحالة">
                       {track.status === 'active' ? <EyeOff className="w-4 h-4" /> : track.status === 'hidden' ? <Archive className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </Button>
@@ -315,6 +355,47 @@ export default function TracksPage() {
             <div className="flex justify-start gap-4 pt-4">
               <Button onClick={handleSave} loading={saving}>{editing ? 'تحديث' : 'إضافة'}</Button>
               <Button variant="secondary" onClick={() => setDialogOpen(false)}>إلغاء</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={subjectsOpen} onOpenChange={setSubjectsOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>إدارة مواد {subjectsTrack?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4" dir="rtl">
+            {subjectsLoading ? (
+              <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-[var(--primary,#2563eb)]" /></div>
+            ) : allSubjects.length === 0 ? (
+              <p className="text-center text-slate-400 py-8">لا توجد مواد مضافة. أضف مواد أولاً.</p>
+            ) : (
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {allSubjects.map(subject => (
+                  <label key={subject.id}
+                    className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors ${
+                      selectedSubjects.has(subject.id) ? 'bg-[var(--primary,#2563eb)]/10 border border-[var(--primary,#2563eb)]/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800 border border-transparent'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedSubjects.has(subject.id)}
+                      onChange={() => toggleSubject(subject.id)}
+                      className="w-4 h-4 rounded accent-[var(--primary,#2563eb)]"
+                    />
+                    <div className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold text-white"
+                      style={{ backgroundColor: subject.color || '#3b82f6' }}>
+                      {subject.name[0]}
+                    </div>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{subject.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            <div className="flex justify-start gap-4 pt-6">
+              <Button onClick={saveSubjects} loading={subjectsLoading}>حفظ</Button>
+              <Button variant="secondary" onClick={() => setSubjectsOpen(false)}>إلغاء</Button>
             </div>
           </div>
         </DialogContent>

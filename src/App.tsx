@@ -8,6 +8,7 @@ import AdminLayout from '@/layouts/AdminLayout'
 import Login from '@/pages/auth/Login'
 import Register from '@/pages/auth/Register'
 import Home from '@/pages/student/Home'
+import SearchResults from '@/pages/student/SearchResults'
 import TrackDetail from '@/pages/student/TrackDetail'
 import SubjectTeachers from '@/pages/student/SubjectTeachers'
 import TeacherDetail from '@/pages/student/TeacherDetail'
@@ -44,6 +45,7 @@ export default function App() {
             {/* Home (public) */}
             <Route path="/" element={<StudentLayout />}>
               <Route index element={<Home />} />
+              <Route path="search" element={<SearchResults />} />
               <Route path="track/:trackId" element={<ProtectedRoute><TrackDetail /></ProtectedRoute>} />
               <Route path="subject/:subjectId" element={<ProtectedRoute><SubjectTeachers /></ProtectedRoute>} />
               <Route path="teacher/:teacherId" element={<ProtectedRoute><TeacherDetail /></ProtectedRoute>} />

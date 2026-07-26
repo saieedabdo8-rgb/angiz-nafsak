@@ -158,7 +158,15 @@ export default function StudentLayout() {
 }
 
 function SearchOverlay({ onClose }: { onClose: () => void }) {
+  const navigate = useNavigate()
   const [query, setQuery] = useState('')
+
+  function doSearch() {
+    if (query.trim()) {
+      navigate(`/search?q=${encodeURIComponent(query.trim())}`)
+      onClose()
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm">
@@ -170,6 +178,7 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
               autoFocus
               value={query}
               onChange={e => setQuery(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') doSearch() }}
               placeholder="ابحث عن معلم أو مادة..."
               className="flex-1 bg-transparent border-none outline-none text-base text-[var(--text,#0f172a)] placeholder:text-[var(--text,#0f172a)]/40"
             />
@@ -177,11 +186,6 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
               إلغاء
             </button>
           </div>
-          {query.length > 0 && (
-            <div className="p-4 text-center text-sm text-[var(--text,#0f172a)]/40">
-              جاري البحث...
-            </div>
-          )}
         </div>
       </div>
       <div className="fixed inset-0 -z-10" onClick={onClose} />

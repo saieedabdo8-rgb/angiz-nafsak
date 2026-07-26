@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Search, BookOpen, Users, Star, ArrowLeft, GraduationCap, Sparkles } from 'lucide-react'
 import { getTracks, getStats } from '@/api/queries'
@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 
 export default function Home() {
+  const navigate = useNavigate()
   const [tracks, setTracks] = useState<Track[]>([])
   const [stats, setStats] = useState({ tracks: 0, subjects: 0, teachers: 0, courses: 0, students: 0 })
   const [loading, setLoading] = useState(true)
@@ -93,6 +94,7 @@ export default function Home() {
               <Input
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && searchQuery.trim()) navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`) }}
                 placeholder="ابحث عن معلم أو مادة..."
                 className="w-full h-14 pr-12 pl-4 text-base bg-white/15 border-white/20 text-white placeholder:text-white/40 rounded-2xl backdrop-blur-sm focus-visible:ring-white/30"
               />

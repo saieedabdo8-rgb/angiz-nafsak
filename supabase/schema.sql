@@ -171,18 +171,12 @@ create table if not exists user_tracks (
 );
 
 -- ============================================================
--- THEME_SETTINGS (Global single-row config)
+-- THEME_SETTINGS
 -- ============================================================
 create table if not exists theme_settings (
-  id bigint primary key default 1 check (id = 1),
-  settings jsonb not null default '{}'::jsonb,
-  updated_at timestamptz default now(),
-  updated_by uuid references auth.users(id) on delete set null
+  key text primary key,
+  value text not null
 );
-
--- Ensure only one row (insert default if missing)
-insert into theme_settings (id, settings) values (1, '{}'::jsonb)
-on conflict (id) do nothing;
 
 -- ============================================================
 -- SETTINGS
@@ -256,80 +250,44 @@ create policy "Profiles updatable by admins" on profiles for update using (
 -- Tracks
 alter table tracks enable row level security;
 create policy "Tracks viewable by everyone" on tracks for select using (true);
-create policy "Tracks insertable by admins" on tracks for insert with check (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
-);
-create policy "Tracks updatable by admins" on tracks for update using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
-);
-create policy "Tracks deletable by admins" on tracks for delete using (
+create policy "Tracks manageable by admins" on tracks for all using (
   exists (select 1 from profiles where id = auth.uid() and role = 'admin')
 );
 
 -- Subjects
 alter table subjects enable row level security;
 create policy "Subjects viewable by everyone" on subjects for select using (true);
-create policy "Subjects insertable by admins" on subjects for insert with check (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
-);
-create policy "Subjects updatable by admins" on subjects for update using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
-);
-create policy "Subjects deletable by admins" on subjects for delete using (
+create policy "Subjects manageable by admins" on subjects for all using (
   exists (select 1 from profiles where id = auth.uid() and role = 'admin')
 );
 
 -- Track_Subjects
 alter table track_subjects enable row level security;
 create policy "Track_Subjects viewable by everyone" on track_subjects for select using (true);
-create policy "Track_Subjects insertable by admins" on track_subjects for insert with check (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
-);
-create policy "Track_Subjects updatable by admins" on track_subjects for update using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
-);
-create policy "Track_Subjects deletable by admins" on track_subjects for delete using (
+create policy "Track_Subjects manageable by admins" on track_subjects for all using (
   exists (select 1 from profiles where id = auth.uid() and role = 'admin')
 );
 
 -- Teachers
 alter table teachers enable row level security;
 create policy "Teachers viewable by everyone" on teachers for select using (true);
-create policy "Teachers insertable by admins" on teachers for insert with check (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
-);
-create policy "Teachers updatable by admins" on teachers for update using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
-);
-create policy "Teachers deletable by admins" on teachers for delete using (
+create policy "Teachers manageable by admins" on teachers for all using (
   exists (select 1 from profiles where id = auth.uid() and role = 'admin')
 );
 
 -- Courses
 alter table courses enable row level security;
 create policy "Courses viewable by everyone" on courses for select using (true);
-create policy "Courses insertable by admins" on courses for insert with check (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
-);
-create policy "Courses updatable by admins" on courses for update using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
-);
-create policy "Courses deletable by admins" on courses for delete using (
+create policy "Courses manageable by admins" on courses for all using (
   exists (select 1 from profiles where id = auth.uid() and role = 'admin')
 );
 
 -- Codes (students never see codes directly)
 alter table codes enable row level security;
-create policy "Codes viewable by admins" on codes for select using (
+create policy "Codes viewable by admins only" on codes for select using (
   exists (select 1 from profiles where id = auth.uid() and role = 'admin')
 );
-create policy "Codes insertable by admins" on codes for insert with check (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
-);
-create policy "Codes updatable by admins" on codes for update using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
-);
-create policy "Codes deletable by admins" on codes for delete using (
+create policy "Codes manageable by admins" on codes for all using (
   exists (select 1 from profiles where id = auth.uid() and role = 'admin')
 );
 
@@ -365,16 +323,8 @@ create policy "Purchases viewable by admins" on purchases for select using (
 -- User_Tracks
 alter table user_tracks enable row level security;
 create policy "User_Tracks viewable by owner" on user_tracks for select using (auth.uid() = student_id);
-create policy "User_Tracks insertable by owner" on user_tracks for insert with check (auth.uid() = student_id);
-create policy "User_Tracks updatable by owner" on user_tracks for update using (auth.uid() = student_id);
-create policy "User_Tracks deletable by owner" on user_tracks for delete using (auth.uid() = student_id);
-create policy "User_Tracks insertable by admins" on user_tracks for insert with check (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
-);
-create policy "User_Tracks updatable by admins" on user_tracks for update using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
-);
-create policy "User_Tracks deletable by admins" on user_tracks for delete using (
+create policy "User_Tracks manageable by owner" on user_tracks for all using (auth.uid() = student_id);
+create policy "User_Tracks manageable by admins" on user_tracks for all using (
   exists (select 1 from profiles where id = auth.uid() and role = 'admin')
 );
 
@@ -388,10 +338,7 @@ create policy "Theme manageable by admins" on theme_settings for all using (
 -- Settings
 alter table settings enable row level security;
 create policy "Settings viewable by everyone" on settings for select using (true);
-create policy "Settings insertable by admins" on settings for insert with check (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
-);
-create policy "Settings updatable by admins" on settings for update using (
+create policy "Settings manageable by admins" on settings for all using (
   exists (select 1 from profiles where id = auth.uid() and role = 'admin')
 );
 
@@ -503,20 +450,6 @@ begin
   return v_code_text;
 end;
 $$;
-
--- ============================================================
--- LOG AUDIT FUNCTION
--- ============================================================
--- ============================================================
--- GRANT PERMISSIONS (required for RLS policies to work)
--- ============================================================
-GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;
-GRANT INSERT, UPDATE, DELETE ON profiles TO authenticated;
-GRANT INSERT, UPDATE, DELETE ON orders TO authenticated;
-GRANT INSERT, UPDATE, DELETE ON payments TO authenticated;
-GRANT INSERT, UPDATE, DELETE ON user_tracks TO authenticated;
-GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated, service_role;
 
 -- ============================================================
 -- LOG AUDIT FUNCTION

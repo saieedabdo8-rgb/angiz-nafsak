@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { GraduationCap, Phone, Lock, LogIn } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -11,6 +11,8 @@ import toast from 'react-hot-toast'
 export default function Login() {
   const { signIn } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/'
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -34,7 +36,7 @@ export default function Login() {
     }
 
     toast.success('تم تسجيل الدخول')
-    navigate('/')
+    navigate(from, { replace: true })
   }
 
   return (

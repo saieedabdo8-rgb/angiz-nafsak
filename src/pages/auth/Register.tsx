@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { GraduationCap, User, Phone, Lock, UserPlus } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -11,6 +11,8 @@ import toast from 'react-hot-toast'
 export default function Register() {
   const { signUp } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/'
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
@@ -39,7 +41,7 @@ export default function Register() {
     }
 
     toast.success('تم إنشاء الحساب بنجاح')
-    navigate('/')
+    navigate(from, { replace: true })
   }
 
   return (

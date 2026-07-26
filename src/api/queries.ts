@@ -132,6 +132,7 @@ export async function updateTeacher(id: string, updates: Partial<Teacher>) {
 }
 
 export async function deleteTeacher(id: string) {
+  await supabase.from('teacher_tracks').delete().eq('teacher_id', id)
   return supabase.from('teachers').delete().eq('id', id)
 }
 
@@ -192,6 +193,9 @@ export async function updateCourse(id: string, updates: Partial<Course>) {
 }
 
 export async function deleteCourse(id: string) {
+  await supabase.from('course_tracks').delete().eq('course_id', id)
+  await supabase.from('orders').delete().eq('course_id', id)
+  await supabase.from('codes').delete().eq('course_id', id)
   return supabase.from('courses').delete().eq('id', id)
 }
 

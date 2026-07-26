@@ -32,17 +32,8 @@ export async function deleteTrack(id: string) {
 }
 
 // --- SUBJECTS ---
-export async function getSubjects(trackId?: string): Promise<Subject[]> {
-  let query = supabase.from('subjects').select('*').eq('status', 'active').order('display_order')
-  if (trackId) {
-    const { data: trackSubjects, error: tsError } = await supabase.from('track_subjects').select('subject_id').eq('track_id', trackId)
-    if (tsError) return handleQueryError(tsError, 'getSubjects track_subjects') as Subject[]
-    if (trackSubjects?.length) {
-      query = supabase.from('subjects').select('*').eq('status', 'active')
-        .in('id', trackSubjects.map(ts => ts.subject_id)).order('display_order')
-    }
-  }
-  const { data, error } = await query
+export async function getSubjects(_trackId?: string): Promise<Subject[]> {
+  const { data, error } = await supabase.from('subjects').select('*').eq('status', 'active').order('display_order')
   if (error) return handleQueryError(error, 'getSubjects') as Subject[]
   return data ?? []
 }

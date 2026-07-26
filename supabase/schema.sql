@@ -171,12 +171,18 @@ create table if not exists user_tracks (
 );
 
 -- ============================================================
--- THEME_SETTINGS
+-- THEME_SETTINGS (Global single-row config)
 -- ============================================================
 create table if not exists theme_settings (
-  key text primary key,
-  value text not null
+  id bigint primary key default 1 check (id = 1),
+  settings jsonb not null default '{}'::jsonb,
+  updated_at timestamptz default now(),
+  updated_by uuid references auth.users(id) on delete set null
 );
+
+-- Ensure only one row (insert default if missing)
+insert into theme_settings (id, settings) values (1, '{}'::jsonb)
+on conflict (id) do nothing;
 
 -- ============================================================
 -- SETTINGS
@@ -375,10 +381,7 @@ create policy "User_Tracks deletable by admins" on user_tracks for delete using 
 -- Theme Settings
 alter table theme_settings enable row level security;
 create policy "Theme viewable by everyone" on theme_settings for select using (true);
-create policy "Theme insertable by admins" on theme_settings for insert with check (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
-);
-create policy "Theme updatable by admins" on theme_settings for update using (
+create policy "Theme manageable by admins" on theme_settings for all using (
   exists (select 1 from profiles where id = auth.uid() and role = 'admin')
 );
 

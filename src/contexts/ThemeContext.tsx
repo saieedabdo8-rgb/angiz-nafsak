@@ -17,7 +17,9 @@ const defaults: Record<string, string> = {
   accent: '#f59e0b',
   background: '#ffffff',
   card: '#f8fafc',
+  surface: '#ffffff',
   text: '#0f172a',
+  secondary_text: '#64748b',
   border: '#e2e8f0',
   success: '#22c55e',
   warning: '#f59e0b',
@@ -28,6 +30,7 @@ const defaults: Record<string, string> = {
   sidebar_bg: '#ffffff',
   hero_bg: '#1e40af',
   button_bg: '#3b82f6',
+  button_hover: '#1d4ed8',
   button_text: '#ffffff',
 }
 
@@ -45,13 +48,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   const fetchTheme = useCallback(async () => {
-    const { data, error } = await supabase.from('theme_settings').select('*')
+    const { data, error } = await supabase.from('theme_settings').select('settings').eq('id', 1).maybeSingle()
     if (error) {
       console.error('ThemeContext fetch error:', error)
     }
-    if (data && data.length > 0) {
-      const map: Record<string, string> = {}
-      for (const row of data) map[row.key] = row.value
+    if (data?.settings && typeof data.settings === 'object' && Object.keys(data.settings).length > 0) {
+      const map = data.settings as Record<string, string>
       setThemeSettings(map)
       applyTheme(map, isDark)
     } else {

@@ -140,8 +140,10 @@ export interface UserTrack {
 }
 
 export interface ThemeSetting {
-  key: string
-  value: string
+  id: number
+  settings: Record<string, string>
+  updated_at: string
+  updated_by: string | null
 }
 
 export interface Setting {

@@ -115,11 +115,10 @@ export default function ThemePage() {
   }
 
   useEffect(() => {
-    supabase.from('theme_settings').select('*').then(({ data, error }) => {
+    supabase.from('theme_settings').select('settings').eq('id', 1).maybeSingle().then(({ data, error }) => {
       if (error) console.error('ThemePage load error:', error)
-      if (data && data.length > 0) {
-        const map: Record<string, string> = {}
-        for (const row of data) map[row.key] = row.value
+      if (data?.settings && typeof data.settings === 'object' && Object.keys(data.settings).length > 0) {
+        const map = data.settings as Record<string, string>
         setDbColors(map)
         setLocalColors(map)
       } else {
@@ -155,26 +154,17 @@ export default function ThemePage() {
 
   async function handleSave() {
     setSaving(true)
-    const errors: string[] = []
-    const entries = Object.entries(localColors)
-
-    for (const [key, value] of entries) {
-      const { error } = await supabase.from('theme_settings').upsert(
-        { key, value },
-        { onConflict: 'key' }
-      )
-      if (error) {
-        console.error(`ThemePage save error for ${key}:`, error)
-        errors.push(`${key}: ${error.message}`)
-      }
-    }
-
-    if (errors.length > 0) {
-      toast.error(`فشل حفظ: ${errors[0]}`)
+    const { error } = await supabase.from('theme_settings').upsert(
+      { id: 1, settings: localColors, updated_at: new Date().toISOString() },
+      { onConflict: 'id' }
+    )
+    if (error) {
+      console.error('ThemePage save error:', error)
+      toast.error('فشل حفظ الثيم: ' + error.message)
     } else {
       setDbColors({ ...localColors })
       await refreshTheme()
-      toast.success('تم حفظ الثيم بنجاح')
+      toast.success('تم حفظ الثيم لجميع زوار الموقع')
     }
     setSaving(false)
   }
@@ -197,12 +187,11 @@ export default function ThemePage() {
     setLocalColors(d)
     applyToDOM(d)
 
-    const { error } = await supabase.from('theme_settings').delete().neq('key', '')
+    const { error } = await supabase.from('theme_settings').upsert(
+      { id: 1, settings: d, updated_at: new Date().toISOString() },
+      { onConflict: 'id' }
+    )
     if (error) console.error('ThemePage restore error:', error)
-
-    for (const [key, value] of Object.entries(d)) {
-      await supabase.from('theme_settings').upsert({ key, value }, { onConflict: 'key' })
-    }
 
     setDbColors(d)
     await refreshTheme()
@@ -265,7 +254,6 @@ export default function ThemePage() {
                     <Check className="w-3.5 h-3.5 text-white" />
                   </div>
                 )}
-                {/* Color preview row */}
                 <div className="flex gap-1.5 mb-3">
                   {['primary', 'accent', 'success', 'warning', 'danger'].map((k) => (
                     <div

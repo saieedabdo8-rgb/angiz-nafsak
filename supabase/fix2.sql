@@ -121,10 +121,7 @@ create policy "Codes deletable by admins" on codes for delete using (
 drop policy if exists "Theme viewable by everyone" on theme_settings;
 drop policy if exists "Theme manageable by admins" on theme_settings;
 create policy "Theme viewable by everyone" on theme_settings for select using (true);
-create policy "Theme insertable by admins" on theme_settings for insert with check (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
-);
-create policy "Theme updatable by admins" on theme_settings for update using (
+create policy "Theme manageable by admins" on theme_settings for all using (
   exists (select 1 from profiles where id = auth.uid() and role = 'admin')
 );
 

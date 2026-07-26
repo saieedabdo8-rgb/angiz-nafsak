@@ -22,10 +22,78 @@ const statusLabels: Record<string, string> = {
   archived: 'مؤرشف',
 }
 
-const defaultForm = {
-  name: '', slug: '', description: '', icon: '',
-  background_color: '#1e40af', gradient_start: '#1e40af', gradient_end: '#7c3aed',
-  text_color: '#ffffff', button_color: '#3b82f6', display_order: 0, status: 'active' as const,
+const arabicChars: Record<string, string> = {
+  ا: 'a', أ: 'a', إ: 'e', آ: 'a', ب: 'b', ت: 't', ث: 'th', ج: 'g',
+  ح: 'h', خ: 'kh', د: 'd', ذ: 'th', ر: 'r', ز: 'z', س: 's', ش: 'sh',
+  ص: 's', ض: 'd', ط: 't', ظ: 'z', ع: 'a', غ: 'gh', ف: 'f', ق: 'q',
+  ك: 'k', ل: 'l', م: 'm', ن: 'n', ه: 'h', و: 'w', ي: 'y', ى: 'a',
+  ة: 'h', ئ: 'e', ء: 'a', ؤ: 'o',
+}
+
+const KNOWN: Record<string, { slug: string; desc: string; icon: string; colors: { bg: string; gs: string; ge: string; tc: string; bc: string } }> = {
+  'علمي علوم': {
+    slug: 'science',
+    desc: 'شعبة تضم مواد الأحياء والكيمياء والفيزياء.',
+    icon: '🧬',
+    colors: { bg: '#10B981', gs: '#34D399', ge: '#14B8A6', tc: '#FFFFFF', bc: '#FFFFFF' },
+  },
+  'علمي رياضة': {
+    slug: 'math',
+    desc: 'شعبة تضم مواد الرياضيات والكيمياء والفيزياء.',
+    icon: '📐',
+    colors: { bg: '#3B82F6', gs: '#6366F1', ge: '#2563EB', tc: '#FFFFFF', bc: '#FFFFFF' },
+  },
+  'أدبي': {
+    slug: 'literary',
+    desc: 'شعبة تضم مواد التاريخ والجغرافيا والإحصاء.',
+    icon: '📚',
+    colors: { bg: '#F97316', gs: '#FB923C', ge: '#F97316', tc: '#FFFFFF', bc: '#FFFFFF' },
+  },
+}
+
+const DFLT = { bg: '#1e40af', gs: '#1e40af', ge: '#7c3aed', tc: '#ffffff', bc: '#3b82f6' }
+
+function transliterate(text: string): string {
+  return text.split('').map(c => arabicChars[c] || c).join('')
+    .replace(/[^a-zA-Z0-9\s-]/g, '').trim().replace(/\s+/g, '-').toLowerCase() || 'track'
+}
+
+function makeSlug(name: string): string {
+  const t = name.trim()
+  if (KNOWN[t]) return KNOWN[t].slug
+  return transliterate(t)
+}
+
+function dedupeSlug(base: string, tracks: Track[], currId?: string): string {
+  let s = base, c = 2
+  while (tracks.some(t => t.slug === s && t.id !== currId)) { s = `${base}-${c}`; c++ }
+  return s
+}
+
+function makeDesc(name: string): string {
+  const t = name.trim()
+  if (KNOWN[t]) return KNOWN[t].desc
+  return `شعبة ${t}`
+}
+
+function makeIcon(name: string): string {
+  const t = name.trim()
+  if (KNOWN[t]) return KNOWN[t].icon
+  return '🎯'
+}
+
+function makeColors(name: string) {
+  const t = name.trim()
+  if (KNOWN[t]) return KNOWN[t].colors
+  return DFLT
+}
+
+function freshForm(tracks: Track[]) {
+  return {
+    name: '', slug: '', description: '', icon: '',
+    background_color: DFLT.bg, gradient_start: DFLT.gs, gradient_end: DFLT.ge,
+    text_color: DFLT.tc, button_color: DFLT.bc, display_order: tracks.length, status: 'active' as const,
+  }
 }
 
 export default function TracksPage() {
@@ -33,8 +101,10 @@ export default function TracksPage() {
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Track | null>(null)
-  const [form, setForm] = useState<Partial<Track>>(defaultForm)
+  const [form, setForm] = useState<Partial<Track>>(freshForm([]))
   const [saving, setSaving] = useState(false)
+  const [slugEdited, setSlugEdited] = useState(false)
+  const [focusedOnce, setFocusedOnce] = useState(false)
 
   useEffect(() => { load() }, [])
 
@@ -47,26 +117,61 @@ export default function TracksPage() {
 
   function openCreate() {
     setEditing(null)
-    setForm(defaultForm)
+    setSlugEdited(false)
+    setFocusedOnce(false)
+    setForm(freshForm(tracks))
     setDialogOpen(true)
   }
 
   function openEdit(track: Track) {
     setEditing(track)
+    setSlugEdited(true)
+    setFocusedOnce(true)
     setForm({ ...track })
     setDialogOpen(true)
   }
 
+  function onNameChange(name: string) {
+    const upd: Partial<Track> = { name }
+
+    if (!slugEdited) {
+      const base = makeSlug(name)
+      upd.slug = dedupeSlug(base, tracks, editing?.id)
+    }
+
+    if (!form.description || !focusedOnce) upd.description = makeDesc(name)
+    if (!form.icon || !focusedOnce) upd.icon = makeIcon(name)
+
+    if (!editing && !slugEdited) {
+      const c = makeColors(name)
+      upd.background_color = c.bg
+      upd.gradient_start = c.gs
+      upd.gradient_end = c.ge
+      upd.text_color = c.tc
+      upd.button_color = c.bc
+    }
+
+    setForm({ ...form, ...upd })
+  }
+
   async function handleSave() {
-    if (!form.name || !form.slug) { toast.error('الاسم والرابط مطلوبان'); return }
+    if (!form.name?.trim()) { toast.error('اسم الشعبة مطلوب'); return }
+    if (tracks.some(t => t.name === form.name!.trim() && t.id !== editing?.id)) {
+      toast.error('اسم الشعبة موجود بالفعل'); return
+    }
+    if (!form.slug?.trim()) { toast.error('الرابط (slug) مطلوب'); return }
+    if (tracks.some(t => t.slug === form.slug && t.id !== editing?.id)) {
+      toast.error('الرابط موجود بالفعل'); return
+    }
+
     setSaving(true)
     if (editing) {
       const { error } = await updateTrack(editing.id, form)
-      if (error) { toast.error('حدث خطأ'); setSaving(false); return }
+      if (error) { toast.error('حدث خطأ أثناء التحديث'); setSaving(false); return }
       toast.success('تم التحديث')
     } else {
       const { error } = await createTrack(form)
-      if (error) { toast.error('حدث خطأ'); setSaving(false); return }
+      if (error) { toast.error('حدث خطأ أثناء الإضافة'); setSaving(false); return }
       toast.success('تم الإضافة')
     }
     setSaving(false)
@@ -147,54 +252,64 @@ export default function TracksPage() {
           <div className="space-y-4 mt-4" dir="rtl">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">الاسم</label>
-                <Input value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="اسم الشعبة" />
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">الاسم *</label>
+                <Input
+                  value={form.name || ''}
+                  onChange={e => onNameChange(e.target.value)}
+                  onFocus={() => setFocusedOnce(true)}
+                  placeholder="مثال: علمي علوم"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">الرابط (slug)</label>
-                <Input value={form.slug || ''} onChange={e => setForm({ ...form, slug: e.target.value })} placeholder="track-slug" />
+                <Input
+                  value={form.slug || ''}
+                  onChange={e => { setForm({ ...form, slug: e.target.value }); setSlugEdited(true) }}
+                  placeholder="science"
+                />
+                <p className="text-xs text-slate-400 mt-1">يتم إنشاء الرابط تلقائياً ويمكنك تعديله إذا أردت.</p>
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">الوصف</label>
-              <Input value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="وصف الشعبة" />
+              <Input value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="يتم إنشاؤه تلقائياً" />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">الإيكون (emoji)</label>
-              <Input value={form.icon || ''} onChange={e => setForm({ ...form, icon: e.target.value })} placeholder="🎯" />
+              <Input value={form.icon || ''} onChange={e => setForm({ ...form, icon: e.target.value })} placeholder="يتم اختياره تلقائياً" />
             </div>
 
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">لون البداية</label>
-                <Input type="color" value={form.gradient_start || '#1e40af'} onChange={e => setForm({ ...form, gradient_start: e.target.value })} />
+                <Input type="color" value={form.gradient_start || DFLT.gs} onChange={e => setForm({ ...form, gradient_start: e.target.value })} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">لون النهاية</label>
-                <Input type="color" value={form.gradient_end || '#7c3aed'} onChange={e => setForm({ ...form, gradient_end: e.target.value })} />
+                <Input type="color" value={form.gradient_end || DFLT.ge} onChange={e => setForm({ ...form, gradient_end: e.target.value })} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">لون الخلفية</label>
-                <Input type="color" value={form.background_color || '#1e40af'} onChange={e => setForm({ ...form, background_color: e.target.value })} />
+                <Input type="color" value={form.background_color || DFLT.bg} onChange={e => setForm({ ...form, background_color: e.target.value })} />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">لون النص</label>
-                <Input type="color" value={form.text_color || '#ffffff'} onChange={e => setForm({ ...form, text_color: e.target.value })} />
+                <Input type="color" value={form.text_color || DFLT.tc} onChange={e => setForm({ ...form, text_color: e.target.value })} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">لون الأزرار</label>
-                <Input type="color" value={form.button_color || '#3b82f6'} onChange={e => setForm({ ...form, button_color: e.target.value })} />
+                <Input type="color" value={form.button_color || DFLT.bc} onChange={e => setForm({ ...form, button_color: e.target.value })} />
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">ترتيب العرض</label>
-              <Input type="number" value={form.display_order ?? 0} onChange={e => setForm({ ...form, display_order: Number(e.target.value) })} />
+              <Input type="number" value={form.display_order ?? tracks.length} onChange={e => setForm({ ...form, display_order: Number(e.target.value) })} />
             </div>
 
             <div className="flex justify-start gap-4 pt-4">

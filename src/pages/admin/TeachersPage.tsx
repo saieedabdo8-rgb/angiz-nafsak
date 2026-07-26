@@ -87,15 +87,17 @@ export default function TeachersPage() {
       if (url) photoUrl = url
     }
 
-    const payload = { ...form, photo: photoUrl }
+    const { subject, track, ...cleanForm } = form
+    const payload = { ...cleanForm, photo: photoUrl }
+    if (!payload.cover) delete payload.cover
 
     if (editing) {
       const { error } = await updateTeacher(editing.id, payload)
-      if (error) { toast.error('حدث خطأ'); setSaving(false); return }
+      if (error) { console.error('update error:', error); toast.error(error.message || 'حدث خطأ'); setSaving(false); return }
       toast.success('تم التحديث')
     } else {
       const { error } = await createTeacher(payload)
-      if (error) { toast.error('حدث خطأ'); setSaving(false); return }
+      if (error) { console.error('create error:', error); toast.error(error.message || 'حدث خطأ'); setSaving(false); return }
       toast.success('تم الإضافة')
     }
     setSaving(false)

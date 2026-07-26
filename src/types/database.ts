@@ -51,6 +51,7 @@ export interface Teacher {
   cover: string | null
   bio: string | null
   subject_id: string
+  track_id: string | null
   experience: string | null
   facebook: string | null
   telegram: string | null
@@ -62,7 +63,7 @@ export interface Teacher {
   created_at: string
   updated_at: string
   subject?: Subject
-  tracks?: Track[]
+  track?: Track
 }
 
 export interface Course {

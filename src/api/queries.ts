@@ -73,53 +73,26 @@ export async function setTrackSubjects(trackId: string, subjectIds: string[]) {
 }
 
 // --- TEACHERS ---
-interface TeacherRow extends Omit<Teacher, 'tracks'> {
-  tracks?: { track: Track }[]
-}
-
-function flattenTeacher(teacher: TeacherRow): Teacher {
-  return { ...teacher, tracks: (teacher.tracks || []).map(tt => tt.track) }
-}
-
-export async function getTeachers(subjectId?: string): Promise<Teacher[]> {
-  let query = supabase.from('teachers').select('*, subject:subjects(*), tracks:teacher_tracks(track:tracks(*))').eq('status', 'active').order('display_order')
+export async function getTeachers(subjectId?: string): Promise<(Teacher & { subject?: Subject; track?: Track })[]> {
+  let query = supabase.from('teachers').select('*, subject:subjects(*), track:tracks(*)').eq('status', 'active').order('display_order')
   if (subjectId) query = query.eq('subject_id', subjectId)
   const { data, error } = await query
-  if (error) return handleQueryError(error, 'getTeachers') as Teacher[]
-  return (data ?? [] as unknown as TeacherRow[]).map(flattenTeacher)
+  if (error) return handleQueryError(error, 'getTeachers') as (Teacher & { subject?: Subject; track?: Track })[]
+  return data ?? []
 }
 
 export async function getAllTeachers(): Promise<Teacher[]> {
-  const { data, error } = await supabase.from('teachers').select('*, subject:subjects(*), tracks:teacher_tracks(track:tracks(*))').order('display_order')
+  const { data, error } = await supabase.from('teachers').select('*, subject:subjects(*), track:tracks(*)').order('display_order')
   if (error) return handleQueryError(error, 'getAllTeachers') as Teacher[]
-  return (data ?? [] as unknown as TeacherRow[]).map(flattenTeacher)
+  return data ?? []
 }
 
 export async function createTeacher(teacher: Partial<Teacher>) {
-  const { track_ids, ...teacherData } = teacher as any
-  const { data, error } = await supabase.from('teachers').insert(teacherData).select().single()
-  if (error) return { data: null, error }
-  if (track_ids?.length) {
-    await supabase.from('teacher_tracks').insert(
-      track_ids.map((track_id: string) => ({ teacher_id: data.id, track_id }))
-    )
-  }
-  return { data, error: null }
+  return supabase.from('teachers').insert(teacher).select().single()
 }
 
 export async function updateTeacher(id: string, updates: Partial<Teacher>) {
-  const { track_ids, ...teacherData } = updates as any
-  const { data, error } = await supabase.from('teachers').update(teacherData).eq('id', id).select().single()
-  if (error) return { data: null, error }
-  if (track_ids) {
-    await supabase.from('teacher_tracks').delete().eq('teacher_id', id)
-    if (track_ids.length) {
-      await supabase.from('teacher_tracks').insert(
-        track_ids.map((track_id: string) => ({ teacher_id: id, track_id }))
-      )
-    }
-  }
-  return { data, error: null }
+  return supabase.from('teachers').update(updates).eq('id', id).select().single()
 }
 
 export async function deleteTeacher(id: string) {

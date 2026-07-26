@@ -22,11 +22,9 @@ const statusLabels: Record<string, string> = {
   archived: 'مؤرشف',
 }
 
-type TeacherForm = Partial<Teacher> & { track_ids: string[] }
-
-const defaultForm: TeacherForm = {
+const defaultForm: Partial<Teacher> = {
   name: '', bio: '', photo: null, cover: null,
-  subject_id: '', track_ids: [] as string[],
+  subject_id: '', track_id: null,
   experience: '', facebook: '', telegram: '', whatsapp: '', youtube: '',
   display_order: 0, status: 'active',
 }
@@ -38,7 +36,7 @@ export default function TeachersPage() {
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Teacher | null>(null)
-  const [form, setForm] = useState<TeacherForm>(defaultForm)
+  const [form, setForm] = useState<Partial<Teacher>>(defaultForm)
   const [saving, setSaving] = useState(false)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
@@ -66,7 +64,7 @@ export default function TeachersPage() {
 
   function openEdit(teacher: Teacher) {
     setEditing(teacher)
-    setForm({ ...teacher, track_ids: teacher.tracks?.map(t => t.id) || [] })
+    setForm({ ...teacher })
     setPhotoPreview(teacher.photo)
     setPhotoFile(null)
     setDialogOpen(true)
@@ -89,7 +87,7 @@ export default function TeachersPage() {
       if (url) photoUrl = url
     }
 
-    const { subject, tracks, created_at, updated_at, rating, ...cleanForm } = form as any
+    const { subject, track, created_at, updated_at, rating, ...cleanForm } = form
     cleanForm.photo = photoUrl
     if (!cleanForm.cover) delete cleanForm.cover
 
@@ -156,7 +154,7 @@ export default function TeachersPage() {
 
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-slate-900 dark:text-white truncate">{teacher.name}</p>
-                    <p className="text-xs text-slate-400 truncate">{teacher.subject?.name}{teacher.tracks?.length ? ` - ${teacher.tracks.map(t => t.name).join('، ')}` : ''}</p>
+                    <p className="text-xs text-slate-400 truncate">{teacher.subject?.name}{teacher.track ? ` - ${teacher.track.name}` : ''}</p>
                   </div>
 
                   <Badge variant={statusColors[teacher.status]}>{statusLabels[teacher.status]}</Badge>
@@ -209,27 +207,12 @@ export default function TeachersPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">الشعب (اختياري - يمكن اختيار أكثر من شعبة)</label>
-                <div className="space-y-2 max-h-40 overflow-y-auto rounded-xl border border-[var(--border,#e2e8f0)] p-3">
-                  {tracks.length === 0 ? (
-                    <p className="text-sm text-slate-400">لا توجد شعب</p>
-                  ) : tracks.map(t => (
-                    <label key={t.id} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={form.track_ids?.includes(t.id) || false}
-                        onChange={e => {
-                          const next = e.target.checked
-                            ? [...(form.track_ids || []), t.id]
-                            : (form.track_ids || []).filter(id => id !== t.id)
-                          setForm({ ...form, track_ids: next })
-                        }}
-                        className="w-4 h-4 rounded accent-[var(--primary,#2563eb)]"
-                      />
-                      <span className="text-sm text-slate-700 dark:text-slate-300">{t.name}</span>
-                    </label>
-                  ))}
-                </div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">الشعبة (اختياري)</label>
+                <select value={form.track_id || ''} onChange={e => setForm({ ...form, track_id: e.target.value || null })}
+                  className="flex h-11 w-full rounded-xl border border-[var(--border,#e2e8f0)] bg-white dark:bg-slate-900 px-4 py-2 text-sm text-[var(--text,#0f172a)]">
+                  <option value="">بدون شعبة</option>
+                  {tracks.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
               </div>
             </div>
 

@@ -240,84 +240,84 @@ insert into storage.buckets (id, name, public) values ('avatars', 'avatars', tru
 alter table profiles enable row level security;
 create policy "Profiles viewable by owner" on profiles for select using (auth.uid() = id);
 create policy "Profiles viewable by admins" on profiles for select using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 create policy "Profiles updatable by owner" on profiles for update using (auth.uid() = id);
 create policy "Profiles updatable by admins" on profiles for update using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- Tracks
 alter table tracks enable row level security;
 create policy "Tracks viewable by everyone" on tracks for select using (true);
 create policy "Tracks manageable by admins" on tracks for all using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- Subjects
 alter table subjects enable row level security;
 create policy "Subjects viewable by everyone" on subjects for select using (true);
 create policy "Subjects manageable by admins" on subjects for all using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- Track_Subjects
 alter table track_subjects enable row level security;
 create policy "Track_Subjects viewable by everyone" on track_subjects for select using (true);
 create policy "Track_Subjects manageable by admins" on track_subjects for all using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- Teachers
 alter table teachers enable row level security;
 create policy "Teachers viewable by everyone" on teachers for select using (true);
 create policy "Teachers manageable by admins" on teachers for all using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- Courses
 alter table courses enable row level security;
 create policy "Courses viewable by everyone" on courses for select using (true);
 create policy "Courses manageable by admins" on courses for all using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- Codes (students never see codes directly)
 alter table codes enable row level security;
 create policy "Codes viewable by admins only" on codes for select using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 create policy "Codes manageable by admins" on codes for all using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- Orders
 alter table orders enable row level security;
 create policy "Orders viewable by owner" on orders for select using (auth.uid() = student_id);
 create policy "Orders viewable by admins" on orders for select using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 create policy "Orders insertable by students" on orders for insert with check (auth.uid() = student_id);
 create policy "Orders updatable by admins" on orders for update using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- Payments
 alter table payments enable row level security;
 create policy "Payments viewable by owner" on payments for select using (auth.uid() = student_id);
 create policy "Payments viewable by admins" on payments for select using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 create policy "Payments insertable by students" on payments for insert with check (auth.uid() = student_id);
 create policy "Payments updatable by admins" on payments for update using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- Purchases
 alter table purchases enable row level security;
 create policy "Purchases viewable by owner" on purchases for select using (auth.uid() = student_id);
 create policy "Purchases viewable by admins" on purchases for select using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- User_Tracks
@@ -325,27 +325,27 @@ alter table user_tracks enable row level security;
 create policy "User_Tracks viewable by owner" on user_tracks for select using (auth.uid() = student_id);
 create policy "User_Tracks manageable by owner" on user_tracks for all using (auth.uid() = student_id);
 create policy "User_Tracks manageable by admins" on user_tracks for all using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- Theme Settings
 alter table theme_settings enable row level security;
 create policy "Theme viewable by everyone" on theme_settings for select using (true);
 create policy "Theme manageable by admins" on theme_settings for all using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- Settings
 alter table settings enable row level security;
 create policy "Settings viewable by everyone" on settings for select using (true);
 create policy "Settings manageable by admins" on settings for all using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- Audit Logs
 alter table audit_logs enable row level security;
 create policy "Audit viewable by admins" on audit_logs for select using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- Storage Policies
@@ -356,7 +356,7 @@ create policy "Students can view own payment screenshots" on storage.objects for
   bucket_id = 'payments' and auth.role() = 'authenticated'
 );
 create policy "Admins can view all payment screenshots" on storage.objects for select using (
-  bucket_id = 'payments' and exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  bucket_id = 'payments' and (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 create policy "Public can view teacher images" on storage.objects for select using (
   bucket_id = 'teachers'
@@ -369,7 +369,7 @@ create policy "Public can view avatars" on storage.objects for select using (
 );
 create policy "Admins can upload images" on storage.objects for insert with check (
   bucket_id in ('teachers', 'courses', 'avatars') and
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- ============================================================
@@ -388,6 +388,9 @@ begin
     coalesce(new.raw_user_meta_data ->> 'phone', ''),
     coalesce(new.raw_user_meta_data ->> 'role', 'student')
   );
+  -- Auto-confirm email so user can login immediately
+  update auth.users set email_confirmed_at = now()
+  where id = new.id and email_confirmed_at is null;
   return new;
 end;
 $$;

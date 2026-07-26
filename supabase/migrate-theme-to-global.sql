@@ -39,7 +39,7 @@ drop policy if exists "Theme manageable by admins" on theme_settings;
 -- Create fresh policies
 create policy "Theme viewable by everyone" on theme_settings for select using (true);
 create policy "Theme manageable by admins" on theme_settings for all using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- Grant access

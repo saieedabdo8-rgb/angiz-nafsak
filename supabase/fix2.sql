@@ -36,13 +36,13 @@ drop policy if exists "Tracks viewable by everyone" on tracks;
 drop policy if exists "Tracks manageable by admins" on tracks;
 create policy "Tracks viewable by everyone" on tracks for select using (true);
 create policy "Tracks insertable by admins" on tracks for insert with check (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 create policy "Tracks updatable by admins" on tracks for update using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 create policy "Tracks deletable by admins" on tracks for delete using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- Subjects
@@ -50,13 +50,13 @@ drop policy if exists "Subjects viewable by everyone" on subjects;
 drop policy if exists "Subjects manageable by admins" on subjects;
 create policy "Subjects viewable by everyone" on subjects for select using (true);
 create policy "Subjects insertable by admins" on subjects for insert with check (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 create policy "Subjects updatable by admins" on subjects for update using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 create policy "Subjects deletable by admins" on subjects for delete using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- Track_Subjects
@@ -64,13 +64,13 @@ drop policy if exists "Track_Subjects viewable by everyone" on track_subjects;
 drop policy if exists "Track_Subjects manageable by admins" on track_subjects;
 create policy "Track_Subjects viewable by everyone" on track_subjects for select using (true);
 create policy "Track_Subjects insertable by admins" on track_subjects for insert with check (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 create policy "Track_Subjects updatable by admins" on track_subjects for update using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 create policy "Track_Subjects deletable by admins" on track_subjects for delete using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- Teachers
@@ -78,13 +78,13 @@ drop policy if exists "Teachers viewable by everyone" on teachers;
 drop policy if exists "Teachers manageable by admins" on teachers;
 create policy "Teachers viewable by everyone" on teachers for select using (true);
 create policy "Teachers insertable by admins" on teachers for insert with check (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 create policy "Teachers updatable by admins" on teachers for update using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 create policy "Teachers deletable by admins" on teachers for delete using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- Courses
@@ -92,29 +92,29 @@ drop policy if exists "Courses viewable by everyone" on courses;
 drop policy if exists "Courses manageable by admins" on courses;
 create policy "Courses viewable by everyone" on courses for select using (true);
 create policy "Courses insertable by admins" on courses for insert with check (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 create policy "Courses updatable by admins" on courses for update using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 create policy "Courses deletable by admins" on courses for delete using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- Codes
 drop policy if exists "Codes viewable by admins only" on codes;
 drop policy if exists "Codes manageable by admins" on codes;
 create policy "Codes viewable by admins" on codes for select using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 create policy "Codes insertable by admins" on codes for insert with check (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 create policy "Codes updatable by admins" on codes for update using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 create policy "Codes deletable by admins" on codes for delete using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- Theme Settings
@@ -122,7 +122,7 @@ drop policy if exists "Theme viewable by everyone" on theme_settings;
 drop policy if exists "Theme manageable by admins" on theme_settings;
 create policy "Theme viewable by everyone" on theme_settings for select using (true);
 create policy "Theme manageable by admins" on theme_settings for all using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- Settings
@@ -130,10 +130,10 @@ drop policy if exists "Settings viewable by everyone" on settings;
 drop policy if exists "Settings manageable by admins" on settings;
 create policy "Settings viewable by everyone" on settings for select using (true);
 create policy "Settings insertable by admins" on settings for insert with check (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 create policy "Settings updatable by admins" on settings for update using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
 );
 
 -- 5. SEED subjects (if not already done)

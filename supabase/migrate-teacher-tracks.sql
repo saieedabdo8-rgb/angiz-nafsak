@@ -40,3 +40,8 @@ grant select, insert, update, delete on teacher_tracks to authenticated;
 grant select, insert, update, delete on course_tracks to authenticated;
 grant select on teacher_tracks to anon;
 grant select on course_tracks to anon;
+
+-- Fix orders FK to cascade on course delete
+alter table orders drop constraint if exists orders_course_id_fkey;
+alter table orders add constraint orders_course_id_fkey
+  foreign key (course_id) references courses(id) on delete cascade;

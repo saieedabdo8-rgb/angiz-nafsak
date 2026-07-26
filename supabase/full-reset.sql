@@ -139,7 +139,7 @@ create table if not exists codes (
 create table if not exists orders (
   id uuid primary key default gen_random_uuid(),
   student_id uuid not null references auth.users(id) on delete cascade,
-  course_id uuid not null references courses(id),
+  course_id uuid not null references courses(id) on delete cascade,
   teacher_id uuid not null references teachers(id),
   price decimal(10,2) not null,
   payment_method text check (payment_method in ('instapay', 'vodafone_cash')),

@@ -1,4 +1,4 @@
--- Run this in Supabase SQL Editor
+-- Migration: allow teachers + courses in multiple tracks
 -- Safe to run multiple times
 
 -- TEACHER_TRACKS
@@ -34,3 +34,9 @@ begin
     alter table courses drop column track_id;
   end if;
 end $$;
+
+-- GRANT permissions (needed because tables were created after initial grants)
+grant select, insert, update, delete on teacher_tracks to authenticated;
+grant select, insert, update, delete on course_tracks to authenticated;
+grant select on teacher_tracks to anon;
+grant select on course_tracks to anon;

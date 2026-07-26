@@ -592,6 +592,12 @@ GRANT INSERT, UPDATE, DELETE ON payments TO authenticated;
 GRANT INSERT, UPDATE, DELETE ON user_tracks TO authenticated;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated, service_role;
 
+-- grant on new junction tables explicitly (for idempotency)
+grant select, insert, update, delete on teacher_tracks to authenticated;
+grant select, insert, update, delete on course_tracks to authenticated;
+grant select on teacher_tracks to anon;
+grant select on course_tracks to anon;
+
 -- 23. CREATE ADMIN PROFILE (if missing)
 insert into profiles (id, full_name, phone, role)
 select 

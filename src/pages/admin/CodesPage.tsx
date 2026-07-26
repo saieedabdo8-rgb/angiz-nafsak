@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Plus, Loader2, Trash2, Download, Upload, Copy, Check } from 'lucide-react'
-import { getAllCourses, getCodes, bulkImportCodes, addSingleCode, deleteCode } from '@/api/queries'
-import type { Course, Code } from '@/types'
+import { Plus, Loader2, Trash2, Download, Upload, Copy, Check, BookOpen } from 'lucide-react'
+import { getAllCourses, getCodes, bulkImportCodes, addSingleCode, deleteCode, getAllTeachers } from '@/api/queries'
+import type { Course, Code, Teacher } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -25,6 +26,8 @@ const statusLabels: Record<string, string> = {
 
 export default function CodesPage() {
   const [courses, setCourses] = useState<Course[]>([])
+  const [teachers, setTeachers] = useState<Teacher[]>([])
+  const [selectedTeacherId, setSelectedTeacherId] = useState('')
   const [selectedCourseId, setSelectedCourseId] = useState('')
   const [codes, setCodes] = useState<Code[]>([])
   const [loading, setLoading] = useState(true)
@@ -37,12 +40,24 @@ export default function CodesPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
   useEffect(() => {
-    getAllCourses().then(data => {
-      setCourses(data)
-      if (data.length > 0) setSelectedCourseId(data[0].id)
+    Promise.all([getAllCourses(), getAllTeachers()]).then(([coursesData, teachersData]) => {
+      setCourses(coursesData)
+      setTeachers(teachersData)
+      if (coursesData.length > 0) setSelectedCourseId(coursesData[0].id)
       setLoading(false)
     })
   }, [])
+
+  const filteredCourses = selectedTeacherId
+    ? courses.filter(c => c.teacher_id === selectedTeacherId)
+    : courses
+
+  useEffect(() => {
+    if (filteredCourses.length > 0 && !filteredCourses.find(c => c.id === selectedCourseId)) {
+      setSelectedCourseId(filteredCourses[0].id)
+    }
+    if (filteredCourses.length === 0) setSelectedCourseId('')
+  }, [selectedTeacherId, courses])
 
   const loadCodes = useCallback(async () => {
     if (!selectedCourseId) return
@@ -126,10 +141,22 @@ export default function CodesPage() {
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
             <div className="flex-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">المدرس</label>
+              <select value={selectedTeacherId} onChange={e => setSelectedTeacherId(e.target.value)}
+                className="flex h-11 w-full rounded-xl border border-[var(--border,#e2e8f0)] bg-white dark:bg-slate-900 px-4 py-2 text-sm text-[var(--text,#0f172a)]">
+                <option value="">كل المدرسين</option>
+                {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
+            <div className="flex-1">
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">اختر الكورس</label>
               <select value={selectedCourseId} onChange={e => { setSelectedCourseId(e.target.value); setStatusFilter('all') }}
                 className="flex h-11 w-full rounded-xl border border-[var(--border,#e2e8f0)] bg-white dark:bg-slate-900 px-4 py-2 text-sm text-[var(--text,#0f172a)]">
-                {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {filteredCourses.length === 0 ? (
+                  <option value="">لا توجد كورسات</option>
+                ) : filteredCourses.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
               </select>
             </div>
             <div>
@@ -146,11 +173,20 @@ export default function CodesPage() {
         </CardContent>
       </Card>
 
-      {codesLoading ? (
+      {courses.length === 0 ? (
+        <div className="text-center py-16">
+          <BookOpen className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+          <p className="text-lg text-slate-400 mb-4">لا توجد كورسات. أضف كورس أولاً</p>
+          <Link to="/admin/courses">
+            <Button><Plus className="w-4 h-4" />إضافة كورس</Button>
+          </Link>
+        </div>
+      ) : codesLoading ? (
         <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[var(--primary,#2563eb)]" /></div>
       ) : filteredCodes.length === 0 ? (
         <div className="text-center py-16">
-          <p className="text-lg text-slate-400">لا توجد أكواد</p>
+          <p className="text-lg text-slate-400 mb-4">لا توجد أكواد لهذا الكورس</p>
+          <Button onClick={() => setDialogOpen('single')}><Plus className="w-4 h-4" />إضافة كود</Button>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-[var(--border,#e2e8f0)]">

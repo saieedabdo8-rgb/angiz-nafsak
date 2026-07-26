@@ -87,19 +87,21 @@ export default function TeachersPage() {
       if (url) photoUrl = url
     }
 
-    const { subject, track, ...cleanForm } = form
-    const payload = { ...cleanForm, photo: photoUrl }
-    if (!payload.cover) delete payload.cover
+    const { subject, track, created_at, updated_at, rating, ...cleanForm } = form
+    cleanForm.photo = photoUrl
+    if (!cleanForm.cover) delete cleanForm.cover
 
-    if (editing) {
-      const { error } = await updateTeacher(editing.id, payload)
-      if (error) { console.error('update error:', error); toast.error(error.message || 'حدث خطأ'); setSaving(false); return }
-      toast.success('تم التحديث')
-    } else {
-      const { error } = await createTeacher(payload)
-      if (error) { console.error('create error:', error); toast.error(error.message || 'حدث خطأ'); setSaving(false); return }
-      toast.success('تم الإضافة')
+    const r = editing
+      ? await updateTeacher(editing.id, cleanForm)
+      : await createTeacher(cleanForm)
+
+    if (r?.error) {
+      console.error('save teacher error:', JSON.stringify(r.error))
+      toast.error('رمز الخطأ: ' + (r.error.code || '') + ' - ' + (r.error.message || 'حدث خطأ'))
+      setSaving(false)
+      return
     }
+    toast.success(editing ? 'تم التحديث' : 'تم الإضافة')
     setSaving(false)
     setDialogOpen(false)
     load()
